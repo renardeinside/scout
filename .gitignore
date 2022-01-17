@@ -49,3 +49,7 @@ scout.egg-info/
 ################################
 _build/
 
+.ipynb_checkpoints/
+.vscode/ 
+
+*.egg-info/
