@@ -50,6 +50,8 @@ scout.egg-info/
 _build/
 
 .ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
 .vscode/ 
 
 *.egg-info/
