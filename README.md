@@ -26,3 +26,8 @@ docker run -v "$(pwd):/scout/data" renardeinside/scout:latest <scout commands an
 ```
 
 Please use the [walkthough documentation](https://chunglabmit.github.io/scout/test_data.html#walkthrough-with-test-data) for examples.
+
+## TBDs
+
+- Refactor dependency management (split main CLI from experimental notebooks etc)
+- Appy code formatting (black + isort)

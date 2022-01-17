@@ -15,7 +15,4 @@ COPY . .
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 RUN --mount=type=cache,target=/root/.cache/pip pip install -e .
 
-# the file below cannot be found (probably it's private)
-# RUN wget -P /scout/models/ https://www.dropbox.com/s/thj48g6klrihuw8/unet_weights3_zika.h5
-
 ENTRYPOINT [ "scout" ]
