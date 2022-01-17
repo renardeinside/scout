@@ -17,6 +17,16 @@ jobs:
       DOCKER_BUILDKIT: 1 
 
     steps: 
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v3
+        with:
+          images: renardeinside/scout
+      
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
 
@@ -34,7 +44,8 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           push: true
-          tags: renardeinside/scout:latest
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
       - name: Create Release
         id: create_release
