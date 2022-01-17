@@ -11,13 +11,16 @@ This module performs perumtation testing on multiscale organoid features
 
 
 def permute_cli(subparsers):
-    permute_parser = subparsers.add_parser('permute', help="permutation testing",
-                                           description="Permutation testing for multiscale organoid features")
+    permute_parser = subparsers.add_parser(
+        "permute",
+        help="permutation testing",
+        description="Permutation testing for multiscale organoid features",
+    )
     return permute_parser
 
 
 def permute_main(args):
-    print('Running permute main')
+    print("Running permute main")
     print(args)
 
 
@@ -29,4 +32,3 @@ unpaired-tests
 correlation-tests
 
 """
-

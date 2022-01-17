@@ -26,7 +26,14 @@ from skimage.filters import gaussian
 from skimage.exposure import equalize_adapthist, rescale_intensity, histogram
 from skimage.restoration import denoise_wavelet, estimate_sigma
 from skimage import img_as_float32
-from scout.utils import extract_ghosted_chunk, extract_box, insert_box, pmap_chunks, verbose_print, tifs_in_dir
+from scout.utils import (
+    extract_ghosted_chunk,
+    extract_box,
+    insert_box,
+    pmap_chunks,
+    verbose_print,
+    tifs_in_dir,
+)
 from scout import io
 import matplotlib.pyplot as plt
 
@@ -70,14 +77,14 @@ def _gaussian_blur_chunk(input_tuple, sigma, output, overlap):
 
     """
     arr, start_coord, chunks = input_tuple
-    ghosted_chunk, start_ghosted, stop_ghosted = extract_ghosted_chunk(arr,
-                                                                       start_coord,
-                                                                       chunks,
-                                                                       overlap)
+    ghosted_chunk, start_ghosted, stop_ghosted = extract_ghosted_chunk(
+        arr, start_coord, chunks, overlap
+    )
     g = gaussian_blur(ghosted_chunk, sigma)
     start_local = start_coord - start_ghosted
-    stop_local = np.minimum(start_local + np.asarray(chunks),
-                            np.asarray(ghosted_chunk.shape))
+    stop_local = np.minimum(
+        start_local + np.asarray(chunks), np.asarray(ghosted_chunk.shape)
+    )
     g_valid = extract_box(g, start_local, stop_local)
 
     stop_coord = start_coord + np.asarray(g_valid.shape)
@@ -127,10 +134,9 @@ def clahe(image, kernel_size, clip_limit=0.01, nbins=256, nb_workers=None):
     """
     if nb_workers is None:
         nb_workers = multiprocessing.cpu_count()
-    f = partial(equalize_adapthist,
-                kernel_size=kernel_size,
-                clip_limit=clip_limit,
-                nbins=nbins)
+    f = partial(
+        equalize_adapthist, kernel_size=kernel_size, clip_limit=clip_limit, nbins=nbins
+    )
     with multiprocessing.Pool(nb_workers) as pool:
         results = list(tqdm.tqdm(pool.imap(f, image), total=image.shape[0]))
     image_min = image.min()
@@ -157,7 +163,7 @@ def remove_background(image, threshold, offset=None):
         output image with background set to 0
 
     """
-    mask = (image >= threshold)
+    mask = image >= threshold
 
     if offset is not None:
         output = np.clip(image * mask - offset, 0, None)
@@ -172,12 +178,14 @@ def downsample_paths(paths, step=100):
 
 
 def estimate_histogram(paths, nbins=256):
-    image = np.asarray([io.imread(path) for path in tqdm.tqdm(paths)])  # Load images into 3D array
+    image = np.asarray(
+        [io.imread(path) for path in tqdm.tqdm(paths)]
+    )  # Load images into 3D array
     counts, bin_centers = histogram(image, nbins=nbins)
     return counts, bin_centers
 
 
-def denoise2d(image, sigma, wavelet='db1'):
+def denoise2d(image, sigma, wavelet="db1"):
     """
     Denoise input `image` using wavelet filtering filtering
 
@@ -210,7 +218,7 @@ def denoise2d(image, sigma, wavelet='db1'):
     return output.astype(image.dtype)
 
 
-def denoise(image, sigma, wavelet='db1', nb_workers=None):
+def denoise(image, sigma, wavelet="db1", nb_workers=None):
     """
     Denoise input `image` slice-by-slice with wavelet filtering
 
@@ -241,6 +249,7 @@ def denoise(image, sigma, wavelet='db1', nb_workers=None):
 
 # Define command-line functionality
 
+
 def process_write(img, f, output, compress=3):
     result = f(img)
     io.imsave(output, result, compress=compress)
@@ -265,21 +274,30 @@ def preprocess_image3d(args, img):
     # Histogram equalization
     if args.k is not None:
         if args.k == 0:
-            verbose_print(args, f"Performing histogram equalization with default kernel size")
+            verbose_print(
+                args, f"Performing histogram equalization with default kernel size"
+            )
             kernel_size = None
         else:
-            verbose_print(args, f"Performing histogram equalization with kernel size {args.k}")
+            verbose_print(
+                args, f"Performing histogram equalization with kernel size {args.k}"
+            )
             kernel_size = args.k
         img = clahe(img, kernel_size=kernel_size)
 
     # Normalize and convert to float
     if args.float:
         img = rescale_intensity(img_as_float32(img))
-        verbose_print(args, f"Converted to normalized float32: min {img.min():.3f}, max {img.max():.3f}")
+        verbose_print(
+            args,
+            f"Converted to normalized float32: min {img.min():.3f}, max {img.max():.3f}",
+        )
 
     # Denoising
     if args.s is not None:
-        verbose_print(args, f"Performing noise removal with sigma {args.s} and wavelet {args.w}")
+        verbose_print(
+            args, f"Performing noise removal with sigma {args.s} and wavelet {args.w}"
+        )
         img = denoise(img, args.s, args.w)
 
     # Convert to Zarr
@@ -327,7 +345,7 @@ def _preprocess_image2d(inputs):
 
 def old_preprocessing_main(args):
     if args.t is None and args.s is None and args.k is None:
-        raise ValueError('No preprocessing tasks were specified')
+        raise ValueError("No preprocessing tasks were specified")
 
     verbose_print(args, f"Preprocessing {args.input}")
 
@@ -338,7 +356,7 @@ def old_preprocessing_main(args):
         img = io.imread(paths[0])
         shape = (len(paths), *img.shape)
         if args.float:
-            dtype = 'float32'
+            dtype = "float32"
         else:
             dtype = img.dtype
 
@@ -349,7 +367,12 @@ def old_preprocessing_main(args):
             args_list.append((args, path, arr, i))
 
         with multiprocessing.Pool(multiprocessing.cpu_count()) as pool:
-            list(tqdm.tqdm(pool.imap_unordered(_preprocess_image2d, args_list), total=len(args_list)))
+            list(
+                tqdm.tqdm(
+                    pool.imap_unordered(_preprocess_image2d, args_list),
+                    total=len(args_list),
+                )
+            )
 
         if args.p is not None:
             before = io.imread(paths[args.p])
@@ -367,22 +390,23 @@ def old_preprocessing_main(args):
             after = np.copy(img[args.p])
 
     else:
-        raise ValueError('Input is not a valid directory or file')
+        raise ValueError("Input is not a valid directory or file")
 
     # Show A/B plot
     if args.p is not None:
         plt.subplot(121)
         plt.imshow(before)
-        plt.title('Before')
+        plt.title("Before")
         plt.subplot(122)
         plt.imshow(after)
-        plt.title('After')
+        plt.title("After")
         plt.show()
 
     verbose_print(args, f"Preprocessing done!")
 
 
 # Newer interface ##############################
+
 
 def _check_input(args):
     if os.path.isdir(args.input):
@@ -392,7 +416,7 @@ def _check_input(args):
         verbose_print(args, f"Preprocessing 3D TIFF {args.input}")
         is_folder = False
     else:
-        raise ValueError('Input is not a valid directory or file')
+        raise ValueError("Input is not a valid directory or file")
     return is_folder
 
 
@@ -405,13 +429,20 @@ def _check_workers(args):
 
 
 def histogram_cli(subparsers):
-    rescale_parser = subparsers.add_parser('histogram', help="Estimate histogram",
-                                           description='Estimate image histogram quickly by skipping images')
-    rescale_parser.add_argument('input', help="Path to folder of 2D TIFFs")
-    rescale_parser.add_argument('output', help="Path CSV of histogram")
-    rescale_parser.add_argument('-s', help="Step size for image sampling", type=int, default=50)
-    rescale_parser.add_argument('-p', '--plot', help="Plot flag", action='store_true')
-    rescale_parser.add_argument('-v', '--verbose', help="Verbose flag", action='store_true')
+    rescale_parser = subparsers.add_parser(
+        "histogram",
+        help="Estimate histogram",
+        description="Estimate image histogram quickly by skipping images",
+    )
+    rescale_parser.add_argument("input", help="Path to folder of 2D TIFFs")
+    rescale_parser.add_argument("output", help="Path CSV of histogram")
+    rescale_parser.add_argument(
+        "-s", help="Step size for image sampling", type=int, default=50
+    )
+    rescale_parser.add_argument("-p", "--plot", help="Plot flag", action="store_true")
+    rescale_parser.add_argument(
+        "-v", "--verbose", help="Verbose flag", action="store_true"
+    )
 
 
 def histogram_main(args):
@@ -430,7 +461,7 @@ def histogram_main(args):
         plt.show()
 
     # Build CSV
-    df = pd.DataFrame({'intensity': bin_centers, 'count': hist})
+    df = pd.DataFrame({"intensity": bin_centers, "count": hist})
     df.to_csv(args.output, index=False)
     verbose_print(args, f"Histogram saved to {args.output}")
 
@@ -438,16 +469,29 @@ def histogram_main(args):
 
 
 def rescale_cli(subparsers):
-    rescale_parser = subparsers.add_parser('rescale', help="Remove background",
-                                           description='Remove image background by thresholding')
-    rescale_parser.add_argument('input', help="Path to folder of 2D TIFFs")
-    rescale_parser.add_argument('histogram', help="Path to CSV of histogram")
-    rescale_parser.add_argument('output', help="Path to output folder")
-    rescale_parser.add_argument('-t', help="Threshold for removing background", type=float, default=0)
-    rescale_parser.add_argument('-n', help="Number of workers. Default, cpu_count", type=int, default=None)
-    rescale_parser.add_argument('-c', help="Output TIFF compression (0-9)", type=int, default=3)
-    rescale_parser.add_argument('-p', help="Percentile to normalize to", type=float, default=99.7)
-    rescale_parser.add_argument('-v', '--verbose', help="Verbose flag", action='store_true')
+    rescale_parser = subparsers.add_parser(
+        "rescale",
+        help="Remove background",
+        description="Remove image background by thresholding",
+    )
+    rescale_parser.add_argument("input", help="Path to folder of 2D TIFFs")
+    rescale_parser.add_argument("histogram", help="Path to CSV of histogram")
+    rescale_parser.add_argument("output", help="Path to output folder")
+    rescale_parser.add_argument(
+        "-t", help="Threshold for removing background", type=float, default=0
+    )
+    rescale_parser.add_argument(
+        "-n", help="Number of workers. Default, cpu_count", type=int, default=None
+    )
+    rescale_parser.add_argument(
+        "-c", help="Output TIFF compression (0-9)", type=int, default=3
+    )
+    rescale_parser.add_argument(
+        "-p", help="Percentile to normalize to", type=float, default=99.7
+    )
+    rescale_parser.add_argument(
+        "-v", "--verbose", help="Verbose flag", action="store_true"
+    )
 
 
 def rescale_image(path, threshold, max_val, output, filename, compress):
@@ -478,8 +522,8 @@ def rescale_main(args):
 
     # Load histogram and compute percentile from CDF
     df = pd.read_csv(args.histogram)
-    bins = df['intensity'].to_numpy()
-    counts = df['count'].to_numpy()
+    bins = df["intensity"].to_numpy()
+    counts = df["count"].to_numpy()
     total = counts.sum()
     cdf = np.cumsum(counts)
     target = total * (args.p / 100)
@@ -503,15 +547,31 @@ def rescale_main(args):
 
 
 def denoise_cli(subparsers):
-    denoise_parser = subparsers.add_parser('denoise', help="Denoise images",
-                                           description='Denoise images using wavelet filtering')
-    denoise_parser.add_argument('input', help="Path to folder of 2D TIFFs")
-    denoise_parser.add_argument('output', help="Path to output folder")
-    denoise_parser.add_argument('-s', help="Noise standard deviation. Default, estimated", type=float, default=None)
-    denoise_parser.add_argument('-w', help="Wavelet for decomposition. Default, db1", default='db1')
-    denoise_parser.add_argument('-n', help="Number of workers. Default, cpu_count", type=int, default=None)
-    denoise_parser.add_argument('-c', help="Output TIFF compression (0-9)", type=int, default=3)
-    denoise_parser.add_argument('-v', '--verbose', help="Verbose flag", action='store_true')
+    denoise_parser = subparsers.add_parser(
+        "denoise",
+        help="Denoise images",
+        description="Denoise images using wavelet filtering",
+    )
+    denoise_parser.add_argument("input", help="Path to folder of 2D TIFFs")
+    denoise_parser.add_argument("output", help="Path to output folder")
+    denoise_parser.add_argument(
+        "-s",
+        help="Noise standard deviation. Default, estimated",
+        type=float,
+        default=None,
+    )
+    denoise_parser.add_argument(
+        "-w", help="Wavelet for decomposition. Default, db1", default="db1"
+    )
+    denoise_parser.add_argument(
+        "-n", help="Number of workers. Default, cpu_count", type=int, default=None
+    )
+    denoise_parser.add_argument(
+        "-c", help="Output TIFF compression (0-9)", type=int, default=3
+    )
+    denoise_parser.add_argument(
+        "-v", "--verbose", help="Verbose flag", action="store_true"
+    )
 
 
 def denoise_main(args):
@@ -536,14 +596,23 @@ def denoise_main(args):
 
 
 def contrast_cli(subparsers):
-    contrast_parser = subparsers.add_parser('contrast', help="Adjust contrast",
-                                            description='Adjust contrast using adaptive histogram equalization')
-    contrast_parser.add_argument('input', help="Path to 3D TIFF or folder of 2D TIFFs")
-    contrast_parser.add_argument('output', help="Path to output folder")
-    contrast_parser.add_argument('-k', help="Kernel size", type=int, default=None)
-    contrast_parser.add_argument('-c', help="Output TIFF compression (0-9)", type=int, default=3)
-    contrast_parser.add_argument('-n', help="Number of workers. Default, cpu_count", type=int, default=None)
-    contrast_parser.add_argument('-v', '--verbose', help="Verbose flag", action='store_true')
+    contrast_parser = subparsers.add_parser(
+        "contrast",
+        help="Adjust contrast",
+        description="Adjust contrast using adaptive histogram equalization",
+    )
+    contrast_parser.add_argument("input", help="Path to 3D TIFF or folder of 2D TIFFs")
+    contrast_parser.add_argument("output", help="Path to output folder")
+    contrast_parser.add_argument("-k", help="Kernel size", type=int, default=None)
+    contrast_parser.add_argument(
+        "-c", help="Output TIFF compression (0-9)", type=int, default=3
+    )
+    contrast_parser.add_argument(
+        "-n", help="Number of workers. Default, cpu_count", type=int, default=None
+    )
+    contrast_parser.add_argument(
+        "-v", "--verbose", help="Verbose flag", action="store_true"
+    )
 
 
 def contrast_main(args):
@@ -551,10 +620,14 @@ def contrast_main(args):
     nb_workers = _check_workers(args)
 
     if args.k is None:
-        verbose_print(args, f"Performing histogram equalization with default kernel size")
+        verbose_print(
+            args, f"Performing histogram equalization with default kernel size"
+        )
         kernel_size = None
     else:
-        verbose_print(args, f"Performing histogram equalization with kernel size {args.k}")
+        verbose_print(
+            args, f"Performing histogram equalization with kernel size {args.k}"
+        )
         kernel_size = args.k
 
     # Find all TIFFs
@@ -573,13 +646,20 @@ def contrast_main(args):
 
 
 def convert_cli(subparsers):
-    convert_parser = subparsers.add_parser('convert', help="Convert TIFF to Zarr",
-                                           description='Convert TIFF to Zarr NestedDirectoryStore')
-    convert_parser.add_argument('input', help="Path to 3D TIFF or folder of 2D TIFFs")
-    convert_parser.add_argument('output', help="Path to output Zarr array")
-    convert_parser.add_argument('-c', help="Chunk size for Zarr output", type=int, nargs='+', default=3*(64,))
-    convert_parser.add_argument('-n', help="Number of workers", type=int, default=None)
-    convert_parser.add_argument('-v', '--verbose', help="Verbose flag", action='store_true')
+    convert_parser = subparsers.add_parser(
+        "convert",
+        help="Convert TIFF to Zarr",
+        description="Convert TIFF to Zarr NestedDirectoryStore",
+    )
+    convert_parser.add_argument("input", help="Path to 3D TIFF or folder of 2D TIFFs")
+    convert_parser.add_argument("output", help="Path to output Zarr array")
+    convert_parser.add_argument(
+        "-c", help="Chunk size for Zarr output", type=int, nargs="+", default=3 * (64,)
+    )
+    convert_parser.add_argument("-n", help="Number of workers", type=int, default=None)
+    convert_parser.add_argument(
+        "-v", "--verbose", help="Verbose flag", action="store_true"
+    )
 
 
 def convert_batch(paths_batch, i, size, arr):
@@ -601,7 +681,9 @@ def convert_main(args):
     # Find all TIFFs
     paths, filenames = tifs_in_dir(args.input)
     verbose_print(args, f"Found {len(paths)} TIFFs")
-    paths_chunked = [paths[pos:pos + args.c[0]] for pos in range(0, len(paths), args.c[0])]
+    paths_chunked = [
+        paths[pos : pos + args.c[0]] for pos in range(0, len(paths), args.c[0])
+    ]
 
     img = io.imread(paths[0])
     shape = (len(paths), *img.shape)
@@ -620,10 +702,14 @@ def convert_main(args):
 
 
 def preprocess_cli(subparsers):
-    preprocess_parser = subparsers.add_parser('preprocess', help="Image preprocessing tool",
-                                              description='Organoid image preprocessing tool')
-    preprocess_subparsers = preprocess_parser.add_subparsers(dest='preprocess_command',
-                                                             title='preprocessing subcommands')
+    preprocess_parser = subparsers.add_parser(
+        "preprocess",
+        help="Image preprocessing tool",
+        description="Organoid image preprocessing tool",
+    )
+    preprocess_subparsers = preprocess_parser.add_subparsers(
+        dest="preprocess_command", title="preprocessing subcommands"
+    )
     histogram_cli(preprocess_subparsers)
     rescale_cli(preprocess_subparsers)
     denoise_cli(preprocess_subparsers)
@@ -634,15 +720,15 @@ def preprocess_cli(subparsers):
 
 def preprocess_main(args):
     commands_dict = {
-        'histogram': histogram_main,
-        'rescale': rescale_main,
-        'denoise': denoise_main,
-        'contrast': contrast_main,
-        'convert': convert_main,
+        "histogram": histogram_main,
+        "rescale": rescale_main,
+        "denoise": denoise_main,
+        "contrast": contrast_main,
+        "convert": convert_main,
     }
     func = commands_dict.get(args.preprocess_command, None)
     if func is None:
         print("Pickle Rick uses preprocessing subcommands... be like Pickle Rick\n")
-        subprocess.call(['scout', 'preprocess', '-h'])
+        subprocess.call(["scout", "preprocess", "-h"])
     else:
         func(args)

@@ -21,7 +21,7 @@ from scout import curvature
 
 
 def smooth(image, sigma):
-    if image.dtype != 'float32':
+    if image.dtype != "float32":
         image = img_as_float32(image)
     g = gaussian(image, sigma=sigma, preserve_range=True)
     return g
@@ -78,10 +78,12 @@ def intensity_probability(image, I0=None, stdev=None):
     normalized = image / I0
     if stdev is None:
         stdev = normalized.std()
-    return 1 - np.exp(-normalized ** 2 / (2 * stdev ** 2))
+    return 1 - np.exp(-(normalized ** 2) / (2 * stdev ** 2))
 
 
-def nucleus_probability(image, sigma, steepness=500, offset=0.0005, I0=None, stdev=None):
+def nucleus_probability(
+    image, sigma, steepness=500, offset=0.0005, I0=None, stdev=None
+):
     """Calculate the nucleus probability map using logistic regression over curvature eigenvalues
 
     Parameters
@@ -137,7 +139,19 @@ def nuclei_centers_probability(prob, threshold, min_dist):
     return peak_local_max(prob, min_distance=min_dist, threshold_abs=threshold)
 
 
-def _detect_nuclei_chunk(input_tuple, overlap, sigma, min_intensity, steepness, offset, I0=None, stdev=None, prob_thresh=0.5, min_dist=1, prob_output=None):
+def _detect_nuclei_chunk(
+    input_tuple,
+    overlap,
+    sigma,
+    min_intensity,
+    steepness,
+    offset,
+    I0=None,
+    stdev=None,
+    prob_thresh=0.5,
+    min_dist=1,
+    prob_output=None,
+):
     """
     Detect nuclei centroids from a chunk of a Zarr array
 
@@ -162,7 +176,9 @@ def _detect_nuclei_chunk(input_tuple, overlap, sigma, min_intensity, steepness, 
     """
     arr, start_coord, chunks = input_tuple
 
-    ghosted_chunk, start_ghosted, _ = utils.extract_ghosted_chunk(arr, start_coord, chunks, overlap)
+    ghosted_chunk, start_ghosted, _ = utils.extract_ghosted_chunk(
+        arr, start_coord, chunks, overlap
+    )
 
     if ghosted_chunk.max() < min_intensity:
         return None
@@ -171,8 +187,9 @@ def _detect_nuclei_chunk(input_tuple, overlap, sigma, min_intensity, steepness, 
 
     if prob_output is not None:
         start_local = start_coord - start_ghosted
-        stop_local = np.minimum(start_local + np.asarray(chunks),
-                                np.asarray(ghosted_chunk.shape))
+        stop_local = np.minimum(
+            start_local + np.asarray(chunks), np.asarray(ghosted_chunk.shape)
+        )
         prob_valid = utils.extract_box(prob, start_local, stop_local)
         stop_coord = start_coord + np.asarray(prob_valid.shape)
         utils.insert_box(prob_output, start_coord, stop_coord, prob_valid)
@@ -183,7 +200,9 @@ def _detect_nuclei_chunk(input_tuple, overlap, sigma, min_intensity, steepness, 
         return None
 
     # Filter out any centers detected in ghosted area
-    centers_interior = utils.filter_ghosted_points(start_ghosted, start_coord, centers_local, chunks, overlap)
+    centers_interior = utils.filter_ghosted_points(
+        start_ghosted, start_coord, centers_local, chunks, overlap
+    )
 
     # change to global coordinates
     centers = centers_interior + start_ghosted
@@ -208,7 +227,21 @@ def _filter_nones(centers_list):
     return [c for c in centers_list if c is not None]
 
 
-def detect_nuclei_parallel(z_arr, sigma, min_intensity, steepness, offset, I0, stdev, prob_thresh, min_dist, chunks, overlap, nb_workers=None, prob_output=None):
+def detect_nuclei_parallel(
+    z_arr,
+    sigma,
+    min_intensity,
+    steepness,
+    offset,
+    I0,
+    stdev,
+    prob_thresh,
+    min_dist,
+    chunks,
+    overlap,
+    nb_workers=None,
+    prob_output=None,
+):
     """
     Detect nuclei centroids from a chunked Zarr array with parallel processing
 
@@ -246,16 +279,18 @@ def detect_nuclei_parallel(z_arr, sigma, min_intensity, steepness, offset, I0, s
     centers : ndarray
 
     """
-    f = partial(_detect_nuclei_chunk,
-                overlap=overlap,
-                sigma=sigma,
-                min_intensity=min_intensity,
-                steepness=steepness,
-                offset=offset,
-                I0=I0,
-                stdev=stdev,
-                prob_thresh=prob_thresh,
-                min_dist=min_dist,
-                prob_output=prob_output)
+    f = partial(
+        _detect_nuclei_chunk,
+        overlap=overlap,
+        sigma=sigma,
+        min_intensity=min_intensity,
+        steepness=steepness,
+        offset=offset,
+        I0=I0,
+        stdev=stdev,
+        prob_thresh=prob_thresh,
+        min_dist=min_dist,
+        prob_output=prob_output,
+    )
     results = utils.pmap_chunks(f, z_arr, chunks, nb_workers, use_imap=True)
     return np.vstack(_filter_nones(results))

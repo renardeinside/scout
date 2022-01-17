@@ -22,10 +22,9 @@ def double_elements_shm(arr, start_coord, chunks):
 
 
 class TestPmapChunks(unittest.TestCase):
-
     def setUp(self):
         self.z = zarr.zeros((25, 25), chunks=(5, 5), dtype=np.float32)
-        self.z[:] = np.arange(25**2).reshape((25, 25))
+        self.z[:] = np.arange(25 ** 2).reshape((25, 25))
         self.f_zarr = double_elements
 
         self.shm = shm
@@ -37,11 +36,15 @@ class TestPmapChunks(unittest.TestCase):
         results = utils.pmap_chunks(self.f_zarr, self.z, nb_workers=2)
         self.assertEqual(np.asarray(results).sum(), 2 * self.z[:].sum())
         # using other shape chunks should still work
-        results = utils.pmap_chunks(self.f_zarr, self.z, chunks=self.z.shape, nb_workers=2)
+        results = utils.pmap_chunks(
+            self.f_zarr, self.z, chunks=self.z.shape, nb_workers=2
+        )
         self.assertEqual(np.asarray(results).sum(), 2 * self.z[:].sum())
 
     def test_shm(self):
-        results = utils.pmap_chunks(self.f_shm, self.z, nb_workers=2)  # one chunk should still work
+        results = utils.pmap_chunks(
+            self.f_shm, self.z, nb_workers=2
+        )  # one chunk should still work
         self.assertEqual(np.asarray(results).sum(), 2 * self.z[:].sum())
         results = utils.pmap_chunks(self.f_shm, self.z, chunks=(5, 5), nb_workers=2)
         self.assertEqual(np.asarray(results).sum(), 2 * self.z[:].sum())

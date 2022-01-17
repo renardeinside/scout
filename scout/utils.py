@@ -18,6 +18,7 @@ import numpy as np
 import tqdm
 
 import sys
+
 if sys.platform.startswith("linux"):
     is_linux = True
     import tempfile
@@ -64,7 +65,7 @@ def tifs_in_dir(path):
     tif_paths = []
     tif_filenames = []
     for f in files:
-        if f.endswith('.tif') or f.endswith('.tiff'):
+        if f.endswith(".tif") or f.endswith(".tiff"):
             tif_paths.append(os.path.join(abspath, f))
             tif_filenames.append(f)
     return tif_paths, tif_filenames
@@ -86,7 +87,7 @@ def chunk_dims(img_shape, chunk_shape):
         a tuple containing the number of chunks in each dimension
 
     """
-    return tuple(int(np.ceil(i/c)) for i, c in zip(img_shape, chunk_shape))
+    return tuple(int(np.ceil(i / c)) for i, c in zip(img_shape, chunk_shape))
 
 
 def chunk_coordinates(shape, chunks):
@@ -108,7 +109,7 @@ def chunk_coordinates(shape, chunks):
     nb_chunks = chunk_dims(shape, chunks)
     start = []
     for indices in product(*tuple(range(n) for n in nb_chunks)):
-        start.append(tuple(i*c for i, c in zip(indices, chunks)))
+        start.append(tuple(i * c for i, c in zip(indices, chunks)))
     return np.asarray(start)
 
 
@@ -189,10 +190,12 @@ def insert_box(arr, start, stop, data):
 
 def extract_ghosted_chunk(arr, start_coord, chunks, overlap):
     end_coord = np.minimum(arr.shape, start_coord + np.asarray(chunks))
-    start_coord_ghosted = np.maximum(np.zeros(arr.ndim, 'int'),
-                                     np.array([s - overlap for s in start_coord]))
-    stop_coord_ghosted = np.minimum(arr.shape,
-                                    np.array([e + overlap for e in end_coord]))
+    start_coord_ghosted = np.maximum(
+        np.zeros(arr.ndim, "int"), np.array([s - overlap for s in start_coord])
+    )
+    stop_coord_ghosted = np.minimum(
+        arr.shape, np.array([e + overlap for e in end_coord])
+    )
     ghosted_chunk = extract_box(arr, start_coord_ghosted, stop_coord_ghosted)
     return ghosted_chunk, start_coord_ghosted, stop_coord_ghosted
 
@@ -212,32 +215,38 @@ def filter_points_in_box(coords, start, stop, return_idx=False):
 def filter_ghosted_points(start_ghosted, start_coord, centers_local, chunks, overlap):
     # filter points on edges
     if start_ghosted[0] < start_coord[0]:
-        interior_z = np.logical_and(centers_local[:, 0] >= overlap, centers_local[:, 0] < chunks[0] + overlap)
+        interior_z = np.logical_and(
+            centers_local[:, 0] >= overlap, centers_local[:, 0] < chunks[0] + overlap
+        )
     else:
-        interior_z = (centers_local[:, 0] < chunks[0])
+        interior_z = centers_local[:, 0] < chunks[0]
     if start_ghosted[1] < start_coord[1]:
-        interior_y = np.logical_and(centers_local[:, 1] >= overlap, centers_local[:, 1] < chunks[1] + overlap)
+        interior_y = np.logical_and(
+            centers_local[:, 1] >= overlap, centers_local[:, 1] < chunks[1] + overlap
+        )
     else:
-        interior_y = (centers_local[:, 1] < chunks[1])
+        interior_y = centers_local[:, 1] < chunks[1]
     if start_ghosted[2] < start_coord[2]:
-        interior_x = np.logical_and(centers_local[:, 2] >= overlap, centers_local[:, 2] < chunks[2] + overlap)
+        interior_x = np.logical_and(
+            centers_local[:, 2] >= overlap, centers_local[:, 2] < chunks[2] + overlap
+        )
     else:
-        interior_x = (centers_local[:, 2] < chunks[2])
+        interior_x = centers_local[:, 2] < chunks[2]
     interior = np.logical_and(np.logical_and(interior_z, interior_y), interior_x)
     return centers_local[np.where(interior)]
 
 
 def write_csv(path, data):
-    with open(path, mode='w') as f:
+    with open(path, mode="w") as f:
         for d in data[:-1]:
-            f.write(str(d) + ',')
+            f.write(str(d) + ",")
         f.write(str(data[-1]))
 
 
 def read_csv(path):
-    with open(path, mode='r') as f:
-        line = f.readline().split('\n')[0]
-    return line.split(',')
+    with open(path, mode="r") as f:
+        line = f.readline().split("\n")[0]
+    return line.split(",")
 
 
 def read_voxel_size(path):
@@ -257,7 +266,15 @@ def read_voxel_size(path):
     return tuple([int(d) / 1000 for d in dims])
 
 
-def pmap_chunks(f, arr, chunks=None, nb_workers=None, use_imap=False, unordered=False, chunksize=None):
+def pmap_chunks(
+    f,
+    arr,
+    chunks=None,
+    nb_workers=None,
+    use_imap=False,
+    unordered=False,
+    chunksize=None,
+):
     """Maps a function over an array in parallel using chunks
 
     The function `f` should take a reference to the array, a starting index, and the chunk size.
@@ -304,9 +321,16 @@ def pmap_chunks(f, arr, chunks=None, nb_workers=None, use_imap=False, unordered=
         with multiprocessing.Pool(processes=nb_workers) as pool:
             if use_imap:
                 if unordered:
-                    results = list(tqdm.tqdm(pool.imap_unordered(f, args_list, chunksize=chunksize), total=len(args_list)))
+                    results = list(
+                        tqdm.tqdm(
+                            pool.imap_unordered(f, args_list, chunksize=chunksize),
+                            total=len(args_list),
+                        )
+                    )
                 else:
-                    results = list(tqdm.tqdm(pool.imap(f, args_list), total=len(args_list)))
+                    results = list(
+                        tqdm.tqdm(pool.imap(f, args_list), total=len(args_list))
+                    )
             else:
                 results = list(pool.starmap(f, args_list))
     else:
@@ -346,6 +370,7 @@ class SharedMemory:
     """
 
     if is_linux:
+
         def __init__(self, shape, dtype):
             """Initializer
 
@@ -362,14 +387,15 @@ class SharedMemory:
                 prefix="proc_%d_" % os.getpid(),
                 suffix=".shm",
                 dir="/dev/shm",
-                delete=True)
+                delete=True,
+            )
             self.pathname = self.tempfile.name
             self.shape = shape
             self.dtype = np.dtype(dtype)
 
         @contextlib.contextmanager
         def txn(self):
-            """ A contextual wrapper of the shared memory
+            """A contextual wrapper of the shared memory
 
             Returns
             --------
@@ -377,9 +403,7 @@ class SharedMemory:
                 A view of the shared memory which has the shape and dtype given at construction
 
             """
-            memory = np.memmap(self.pathname,
-                               shape=self.shape,
-                               dtype=self.dtype)
+            memory = np.memmap(self.pathname, shape=self.shape, dtype=self.dtype)
             yield memory
             del memory
 
@@ -390,6 +414,7 @@ class SharedMemory:
             self.pathname, self.shape, self.dtype = args
 
     else:
+
         def __init__(self, shape, dtype):
             """Initializer
 
@@ -408,7 +433,7 @@ class SharedMemory:
             self.dtype = dtype
 
         def txn(self):
-            """ A contextual wrapper of the shared memory
+            """A contextual wrapper of the shared memory
 
             Returns
             --------

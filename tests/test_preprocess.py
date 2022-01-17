@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 @pytest.fixture
 def image_path():
-    return 'data/syto.tif'
+    return "data/syto.tif"
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ def image(image_path):
 
 @pytest.fixture
 def zarr_path(tmpdir):
-    return os.path.join(tmpdir, 'example.zarr')
+    return os.path.join(tmpdir, "example.zarr")
 
 
 def test_denoise2d(image):

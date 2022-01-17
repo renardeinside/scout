@@ -4,11 +4,10 @@ from scout import score
 
 
 class TestPrecision(unittest.TestCase):
-
     def test(self):
         tp = [100, 0]
         fp = [25, 100]
-        expected = [100. / 125., 0]
+        expected = [100.0 / 125.0, 0]
         for tpp, fpp, e in zip(tp, fp, expected):
             self.assertAlmostEqual(e, score.precision(tpp, fpp))
 
@@ -17,11 +16,10 @@ class TestPrecision(unittest.TestCase):
 
 
 class TestRecall(unittest.TestCase):
-
     def test(self):
         tp = [100, 0]
         fn = [50, 100]
-        expected = [100. / 150., 0]
+        expected = [100.0 / 150.0, 0]
         for tpp, fnn, e in zip(tp, fn, expected):
             self.assertAlmostEqual(e, score.recall(tpp, fnn))
 
@@ -30,7 +28,6 @@ class TestRecall(unittest.TestCase):
 
 
 class TestMatchCentroids(unittest.TestCase):
-
     def do_case(self, c1, c2, max_distance, c1_expected, c2_expected):
         c1_result, c2_result = score.match_centroids(c1, c2, max_distance)
         np.testing.assert_equal(c1_result, c1_expected)
@@ -41,26 +38,31 @@ class TestMatchCentroids(unittest.TestCase):
         np.testing.assert_equal(c2_result, c2_expected)
 
     def test_match_one(self):
-        self.do_case(np.array([[1., 2., 3.]]),
-                     np.array([[1., 2., 3.5]]),
-                     .51,
-                     np.zeros(1, int),
-                     np.zeros(1, int))
+        self.do_case(
+            np.array([[1.0, 2.0, 3.0]]),
+            np.array([[1.0, 2.0, 3.5]]),
+            0.51,
+            np.zeros(1, int),
+            np.zeros(1, int),
+        )
 
     def test_no_match_one(self):
-        self.do_case(np.array([[1., 2., 3.]]),
-                     np.array([[1., 2., 3.5]]),
-                     0.49,
-                     -np.ones(1, int),
-                     -np.ones(1, int))
+        self.do_case(
+            np.array([[1.0, 2.0, 3.0]]),
+            np.array([[1.0, 2.0, 3.5]]),
+            0.49,
+            -np.ones(1, int),
+            -np.ones(1, int),
+        )
 
     def test_best(self):
-        self.do_case(np.array([[1., 2., 3.]]),
-                     np.array([[1., 2., 3.5],
-                               [1., 2., 3.4]]),
-                     .51,
-                     np.ones(1, int),
-                     np.array([-1, 0]))
+        self.do_case(
+            np.array([[1.0, 2.0, 3.0]]),
+            np.array([[1.0, 2.0, 3.5], [1.0, 2.0, 3.4]]),
+            0.51,
+            np.ones(1, int),
+            np.array([-1, 0]),
+        )
 
 
 class TestScoreCentroids(unittest.TestCase):
@@ -72,22 +74,30 @@ class TestScoreCentroids(unittest.TestCase):
 
     def test_perfect(self):
         self.do_case(
-            np.array([[1., 2., 3.],
-                      [4., 5., 6.]]),
-            np.array([[1., 2., 3.],
-                      [4., 5., 6.]]),
-            .5, 1.0, 1.0, 1.0)
+            np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]),
+            np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]),
+            0.5,
+            1.0,
+            1.0,
+            1.0,
+        )
 
     def test_one_missing(self):
         self.do_case(
-            np.array([[1., 2., 3.]]),
-            np.array([[1., 2., 3.],
-                      [4., 5., 6.]]),
-            .5, 1.0, .5, 1.0 / 1.5)
+            np.array([[1.0, 2.0, 3.0]]),
+            np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]),
+            0.5,
+            1.0,
+            0.5,
+            1.0 / 1.5,
+        )
 
     def test_one_extra(self):
         self.do_case(
-            np.array([[1., 2., 3.],
-                      [4., 5., 6.]]),
-            np.array([[1., 2., 3.]]),
-            .5, .5, 1.0, 1.0 / 1.5)
+            np.array([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]),
+            np.array([[1.0, 2.0, 3.0]]),
+            0.5,
+            0.5,
+            1.0,
+            1.0 / 1.5,
+        )

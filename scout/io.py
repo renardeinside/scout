@@ -93,7 +93,7 @@ def imread_folder(path, nb_workers):
     return data
 
 
-def open(path, nested=True, mode='a'):
+def open(path, nested=True, mode="a"):
     """
     Opens a persistent Zarr array or NestedDirectoryStore located at `path`.
 
@@ -143,22 +143,22 @@ def new_zarr(path, shape, chunks, dtype, in_memory=False, **kwargs):
     arr : zarr Array
         Reference to open zarr array
     """
-    compressor = Blosc(cname='zstd', clevel=1, shuffle=Blosc.BITSHUFFLE)
+    compressor = Blosc(cname="zstd", clevel=1, shuffle=Blosc.BITSHUFFLE)
     if in_memory:
-        z_arr_out = zarr.zeros(shape=shape,
-                               chunks=chunks,
-                               dtype=dtype,
-                               compressor=compressor,
-                               **kwargs)
+        z_arr_out = zarr.zeros(
+            shape=shape, chunks=chunks, dtype=dtype, compressor=compressor, **kwargs
+        )
     else:
         store = zarr.NestedDirectoryStore(path)
-        z_arr_out = zarr.open(store,
-                              mode='w',
-                              shape=shape,
-                              chunks=chunks,
-                              dtype=dtype,
-                              compressor=compressor,
-                              **kwargs)
+        z_arr_out = zarr.open(
+            store,
+            mode="w",
+            shape=shape,
+            chunks=chunks,
+            dtype=dtype,
+            compressor=compressor,
+            **kwargs
+        )
     return z_arr_out
 
 

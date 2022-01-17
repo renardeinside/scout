@@ -30,7 +30,7 @@ class TestPointsToBinary(unittest.TestCase):
 
     def test_one(self):
         shape = (128, 128, 128)
-        points = tuple(np.array(s//2) for s in shape)
+        points = tuple(np.array(s // 2) for s in shape)
         binary = synthetic.points_to_binary(points=points, shape=shape)
         self.assertEqual(binary.shape, shape)
         self.assertTrue(np.all(binary[points] == 255))
@@ -66,8 +66,8 @@ class TestBinaryToBlobs(unittest.TestCase):
         offset = 1
         targets = [0.22313017, 0.68728930, 0.84648174, 0.91051036]
 
-        points = tuple(np.array(s//2) for s in shape)
-        test_points = tuple(np.array(s//2+offset) for s in shape)
+        points = tuple(np.array(s // 2) for s in shape)
+        test_points = tuple(np.array(s // 2 + offset) for s in shape)
         binary = synthetic.points_to_binary(points=points, shape=shape)
         for sigma, target in zip(sigmas, targets):
             blobs = synthetic.binary_to_blobs(binary, sigma)
@@ -91,7 +91,7 @@ class TestRemoveRandomPoints(unittest.TestCase):
         amount = 0.5
         points = synthetic.random_points(n, shape)
         sample = synthetic.remove_random_points(points, amount)
-        self.assertTrue(len(sample[0]) == n//2)
+        self.assertTrue(len(sample[0]) == n // 2)
         self.check_subset(points, sample)
 
     def test_int_outbounds(self):
@@ -115,5 +115,5 @@ class TestRemoveRandomPoints(unittest.TestCase):
             self.assertTrue(np.all(np.isin(s, p)))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

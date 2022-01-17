@@ -97,7 +97,7 @@ def f_score(n_true_positive, n_false_positive, n_false_negative):
     return 2 * p * r / (p + r)
 
 
-def match_centroids(c1, c2, max_distance, inf=100000.):
+def match_centroids(c1, c2, max_distance, inf=100000.0):
     """Find the best matching of centroids in c1 to centroids in c2
 
     Match centroids in `c1` to those in `c2`, minimizing total distance between
@@ -135,8 +135,7 @@ def match_centroids(c1, c2, max_distance, inf=100000.):
     for c2_idx, c1s in enumerate(c2_matches):
         if len(c1s) == 0:
             continue
-        d = np.sqrt(np.sum(
-            (c1[np.array(c1s)] - c2[c2_idx][np.newaxis, :]) ** 2, 1))
+        d = np.sqrt(np.sum((c1[np.array(c1s)] - c2[c2_idx][np.newaxis, :]) ** 2, 1))
         for c1_idx, dd in zip(c1s, d):
             matrix[c1_idx, c2_idx] = dd * 2
     #
@@ -151,7 +150,7 @@ def match_centroids(c1, c2, max_distance, inf=100000.):
     # There is no penalty for connecting alternatives to each other whatever
     # way can be done.
     #
-    matrix[len(c1):, len(c2):] = 0
+    matrix[len(c1) :, len(c2) :] = 0
     #
     # Run munkres algorithm to do assignment
     #
@@ -239,28 +238,30 @@ def parse_into_array(path):
 
 
 def main():
-    """Compute f-score, precision and recall from the command-line
-    """
+    """Compute f-score, precision and recall from the command-line"""
     parser = argparse.ArgumentParser(
         epilog="Ground-truth and detected files can be an Nx3 array "
-               "saved using numpy.save (use extension .npy) or json.dump "
-               "(use extension .json).")
-    parser.add_argument("--gt-path",
-                        help="Path to list of ground-truth points",
-                        required=True)
-    parser.add_argument("--detected-path",
-                        help="Path to list of detected points",
-                        required=True)
-    parser.add_argument("--max-distance",
-                        help="Maximum distance between pairs of points",
-                        required=True,
-                        type=float)
-    parser.add_argument("--fp-path",
-                         help="Path to list of false positive points",
-                        default="")
-    parser.add_argument("--fn-path",
-                        default="",
-                        help="Path to file of false negative points")
+        "saved using numpy.save (use extension .npy) or json.dump "
+        "(use extension .json)."
+    )
+    parser.add_argument(
+        "--gt-path", help="Path to list of ground-truth points", required=True
+    )
+    parser.add_argument(
+        "--detected-path", help="Path to list of detected points", required=True
+    )
+    parser.add_argument(
+        "--max-distance",
+        help="Maximum distance between pairs of points",
+        required=True,
+        type=float,
+    )
+    parser.add_argument(
+        "--fp-path", help="Path to list of false positive points", default=""
+    )
+    parser.add_argument(
+        "--fn-path", default="", help="Path to file of false negative points"
+    )
     args = parser.parse_args()
     gt = parse_into_array(args.gt_path)
     detected = parse_into_array(args.detected_path)
@@ -274,11 +275,13 @@ def main():
         fn_idxs = np.where(score.gt_per_detected == -1)
         fn = gt[fn_idxs]
         json.dump(fn.tolist(), open(args.fn_path, "w"))
-    for key, value in (("precision", score.precision),
-                       ("recall", score.recall),
-                       ("f-score", score.f_score)):
+    for key, value in (
+        ("precision", score.precision),
+        ("recall", score.recall),
+        ("f-score", score.f_score),
+    ):
         print("%12s %.3f" % (key, value))
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
     main()

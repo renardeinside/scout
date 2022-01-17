@@ -8,8 +8,7 @@ with open("./README.md") as fd:
 setup(
     name="scout",
     version=version,
-    description=
-    "Multiscale hyperdimensional phentypic analysis of organoids",
+    description="Multiscale hyperdimensional phentypic analysis of organoids",
     long_description=long_description,
     install_requires=[
         "matplotlib",
@@ -24,18 +23,17 @@ setup(
         "pandas",
         "tifffile",
         "lapsolver",
-        "tensorflow"
+        "tensorflow",
     ],
     author="Kwanghun Chung Lab",
-    packages=["scout",
-              ],
-    entry_points={'console_scripts': [
-        'scout=scout.main:main'
-    ]},
+    packages=[
+        "scout",
+    ],
+    entry_points={"console_scripts": ["scout=scout.main:main"]},
     url="https://github.com/chunglabmit/scout",
     license="MIT",
     classifiers=[
         "Development Status :: 3 - Alpha",
-        'Programming Language :: Python :: 3.6',
-    ]
+        "Programming Language :: Python :: 3.6",
+    ],
 )

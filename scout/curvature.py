@@ -136,6 +136,7 @@ def structure_tensor(dz, dy, dx):
     # Shorten dx, dy and dz by 1
     def shorten(x):
         return x[1:-1, 1:-1, 1:-1]
+
     dx = shorten(dx)
     dy = shorten(dy)
     dz = shorten(dz)
@@ -182,8 +183,9 @@ def _minor(x, i, j):
         x without column i and row j
 
     """
-    return [[x[n][m] for m in range(len(x[0])) if m != j]
-            for n in range(len(x)) if n != i]
+    return [
+        [x[n][m] for m in range(len(x[0])) if m != j] for n in range(len(x)) if n != i
+    ]
 
 
 def _determinant3(x):
@@ -200,9 +202,11 @@ def _determinant3(x):
         An array that is the determinant of each 3x3 of x
 
     """
-    return x[0][0] * _determinant2(_minor(x, 0, 0)) -\
-           x[0][1] * _determinant2(_minor(x, 0, 1)) +\
-           x[0][2] * _determinant2(_minor(x, 0, 2))
+    return (
+        x[0][0] * _determinant2(_minor(x, 0, 0))
+        - x[0][1] * _determinant2(_minor(x, 0, 1))
+        + x[0][2] * _determinant2(_minor(x, 0, 2))
+    )
 
 
 def _transpose(x):
@@ -245,9 +249,13 @@ def _inverse(x):
     """
     det_x = _determinant3(x)
     x_t = _transpose(x)
-    return [[_sign(i, j) * _determinant2(_minor(x_t, i, j)) / det_x
-             for j in range(len(x[0]))]
-           for i in range(len(x))]
+    return [
+        [
+            _sign(i, j) * _determinant2(_minor(x_t, i, j)) / det_x
+            for j in range(len(x[0]))
+        ]
+        for i in range(len(x))
+    ]
 
 
 def weingarten(x, zum=1, yum=1, xum=1):
@@ -282,14 +290,14 @@ def weingarten(x, zum=1, yum=1, xum=1):
     dyy = dy(dy_, yum=yum)
     dxy = dyx = dy(dx_, yum=yum)
     dxx = dx(dx_, xum=xum)
-    H = [[dzz, dzy, dzx],
-         [dyz, dyy, dyx],
-         [dxz, dxy, dxx]]
+    H = [[dzz, dzy, dzx], [dyz, dyy, dyx], [dxz, dxy, dxx]]
     S = structure_tensor(dz_, dy_, dx_)
     l = torch.sqrt(1 + torch.sqrt(S[0][0] + S[1][1] + S[2][2]))
-    B = [[S[0][0] + 1, S[0][1], S[0][2]],
-         [S[1][0], S[1][1] + 1, S[1][2]],
-         [S[2][0], S[1][2], S[2][2] + 1]]
+    B = [
+        [S[0][0] + 1, S[0][1], S[0][2]],
+        [S[1][0], S[1][1] + 1, S[1][2]],
+        [S[2][0], S[1][2], S[2][2] + 1],
+    ]
     del S
     inv_B = _inverse(B)
     del B
@@ -332,18 +340,20 @@ def eigen3(A):
     # From https://en.wikipedia.org/wiki/Eigenvalue_algorithm#3%C3%973_matrices
     #
     p1 = _sq(A[0][1]) + _sq(A[0][2]) + _sq(A[1][2])
-    q = (A[0][0] + A[1][1] + A[2][2])/3
+    q = (A[0][0] + A[1][1] + A[2][2]) / 3
     p2 = _sq(A[0][0] - q) + _sq(A[1][1] - q) + _sq(A[2][2] - q) + 2 * p1
     p = torch.sqrt(p2 / 6)
     del p2
-    B = [[(1 / p) * ((A[i][j] - q) if i == j else A[i][j])
-          for j in range(3)] for i in range(3)]
+    B = [
+        [(1 / p) * ((A[i][j] - q) if i == j else A[i][j]) for j in range(3)]
+        for i in range(3)
+    ]
     r = _determinant3(B) / 2
     del B
     r = torch.clamp(r, -1, 1)
     phi = torch.acos(r) / 3
     eig1 = q + 2 * p * torch.cos(phi)
-    eig3 = q + 2 * p * torch.cos(phi + (2*np.pi/3))
+    eig3 = q + 2 * p * torch.cos(phi + (2 * np.pi / 3))
     del r
     del phi
     del p
@@ -371,8 +381,7 @@ def eigen3(A):
     return eig1, eig2, eig3
 
 
-def eigvals_of_weingarten(x, ew_block_size=64,
-                          zum=1, yum=1, xum=1):
+def eigvals_of_weingarten(x, ew_block_size=64, zum=1, yum=1, xum=1):
     """Find the eigenvalues of the weingarten operator
 
     Parameters
@@ -417,53 +426,66 @@ def eigvals_of_weingarten(x, ew_block_size=64,
         # the next block of memory to the GPU.
         #
         def do_copy_to_gpu(x0a, x1a, y0a, y1a, z0a, z1a, idx):
-            logging.debug("Starting copy to GPU: %d:%d, %d:%d, %d:%d idx=%d" %
-                          (x0a, x1a, y0a, y1a, z0a, z1a, idx))
+            logging.debug(
+                "Starting copy to GPU: %d:%d, %d:%d, %d:%d idx=%d"
+                % (x0a, x1a, y0a, y1a, z0a, z1a, idx)
+            )
             a[idx] = torch.from_numpy(
-                xpad[z0a:z1a + 4, y0a:y1a + 4, x0a:x1a + 4]).cuda()
-            logging.debug("Finished copy to GPU: %d:%d, %d:%d, %d:%d idx=%d" %
-                          (x0a, x1a, y0a, y1a, z0a, z1a, idx))
+                xpad[z0a : z1a + 4, y0a : y1a + 4, x0a : x1a + 4]
+            ).cuda()
+            logging.debug(
+                "Finished copy to GPU: %d:%d, %d:%d, %d:%d idx=%d"
+                % (x0a, x1a, y0a, y1a, z0a, z1a, idx)
+            )
 
         def do_eigenvalues_of_weingarten(idx):
             logging.debug("Starting eigenvalues of weingarten, idx=%d" % idx)
-            #zumc = torch.from_numpy(np.array([zum], np.float32)).expand_as(a[idx]).cuda()
-            #yumc = torch.from_numpy(np.array([yum], np.float32)).expand_as(a[idx]).cuda()
-            #xumc = torch.from_numpy(np.array([xum], np.float32)).expand_as(a[idx]).cuda()
+            # zumc = torch.from_numpy(np.array([zum], np.float32)).expand_as(a[idx]).cuda()
+            # yumc = torch.from_numpy(np.array([yum], np.float32)).expand_as(a[idx]).cuda()
+            # xumc = torch.from_numpy(np.array([xum], np.float32)).expand_as(a[idx]).cuda()
 
             e[idx] = eigen3(weingarten(a[idx], zum=zum, yum=yum, xum=xum))
             logging.debug("Finished eigenvalues of weingarten, idx=%d" % idx)
 
         def do_copy_from_gpu(x0a, x1a, y0a, y1a, z0a, z1a, idx):
-            logging.debug("Starting copy from GPU: %d:%d, %d:%d, %d:%d idx=%d" %
-                          (x0a, x1a, y0a, y1a, z0a, z1a, idx))
+            logging.debug(
+                "Starting copy from GPU: %d:%d, %d:%d, %d:%d idx=%d"
+                % (x0a, x1a, y0a, y1a, z0a, z1a, idx)
+            )
             e1, e2, e3 = e[idx]
             result[z0a:z1a, y0a:y1a, x0a:x1a, 0] = e1.cpu().numpy()
             result[z0a:z1a, y0a:y1a, x0a:x1a, 1] = e2.cpu().numpy()
             result[z0a:z1a, y0a:y1a, x0a:x1a, 2] = e3.cpu().numpy()
-            logging.debug("Finished copy from GPU: %d:%d, %d:%d, %d:%d idx=%d" %
-                          (x0a, x1a, y0a, y1a, z0a, z1a, idx))
+            logging.debug(
+                "Finished copy from GPU: %d:%d, %d:%d, %d:%d idx=%d"
+                % (x0a, x1a, y0a, y1a, z0a, z1a, idx)
+            )
 
         to_gpu = []
         eow = []
         from_gpu = []
         idx = 0
         for (x0a, x1a), (y0a, y1a), (z0a, z1a) in itertools.product(
-            zip(x0, x1), zip(y0, y1), zip(z0, z1)):
+            zip(x0, x1), zip(y0, y1), zip(z0, z1)
+        ):
             to_gpu.append(
-                lambda x0a=x0a, x1a=x1a, y0a=y0a, y1a=y1a, z0a=z0a, z1a=z1a,
-                       idx=idx:
-                       do_copy_to_gpu(x0a, x1a, y0a, y1a, z0a, z1a, idx))
+                lambda x0a=x0a, x1a=x1a, y0a=y0a, y1a=y1a, z0a=z0a, z1a=z1a, idx=idx: do_copy_to_gpu(
+                    x0a, x1a, y0a, y1a, z0a, z1a, idx
+                )
+            )
             eow.append(lambda idx=idx: do_eigenvalues_of_weingarten(idx))
             from_gpu.append(
-                lambda x0a=x0a, x1a=x1a, y0a=y0a, y1a=y1a, z0a=z0a, z1a=z1a,
-                       idx=idx:
-                       do_copy_from_gpu(x0a, x1a, y0a, y1a, z0a, z1a, idx))
+                lambda x0a=x0a, x1a=x1a, y0a=y0a, y1a=y1a, z0a=z0a, z1a=z1a, idx=idx: do_copy_from_gpu(
+                    x0a, x1a, y0a, y1a, z0a, z1a, idx
+                )
+            )
             idx = 1 - idx
 
-        operations = [to_gpu[0], eow[0]] + \
-                      sum(map(list,
-                              zip(to_gpu[1:], eow[1:], from_gpu[:-1])), []) +\
-                     [from_gpu[-1]]
+        operations = (
+            [to_gpu[0], eow[0]]
+            + sum(map(list, zip(to_gpu[1:], eow[1:], from_gpu[:-1])), [])
+            + [from_gpu[-1]]
+        )
         [_() for _ in operations]
     finally:
         logging.debug("Deleting intermediate variables")
@@ -515,15 +537,15 @@ def structure_tensor_numpy(grad):
     fz = grad[..., 0]
     fy = grad[..., 1]
     fx = grad[..., 2]
-    S[..., 0, 0] = fz**2
-    S[..., 1, 1] = fy**2
-    S[..., 2, 2] = fx**2
-    S[..., 0, 1] = fz*fy
-    S[..., 0, 2] = fz*fx
-    S[..., 1, 2] = fy*fx
-    S[..., 1, 0] = fz*fy
-    S[..., 2, 0] = fz*fx
-    S[..., 2, 1] = fy*fx
+    S[..., 0, 0] = fz ** 2
+    S[..., 1, 1] = fy ** 2
+    S[..., 2, 2] = fx ** 2
+    S[..., 0, 1] = fz * fy
+    S[..., 0, 2] = fz * fx
+    S[..., 1, 2] = fy * fx
+    S[..., 1, 0] = fz * fy
+    S[..., 2, 0] = fz * fx
+    S[..., 2, 1] = fy * fx
     return S
 
 
@@ -543,7 +565,7 @@ def hessian_numpy(data, zum=1.0, yum=1.0, xum=1.0):
 
 def weingarten_numpy(g, zum=1.0, yum=1.0, xum=1.0):
     grad = gradient_numpy(g, zum=zum, yum=yum, xum=xum)
-    l = np.sqrt(1+np.linalg.norm(grad, axis=-1))
+    l = np.sqrt(1 + np.linalg.norm(grad, axis=-1))
     H = hessian_numpy(g, zum=zum, yum=yum, xum=xum)
     S = structure_tensor_numpy(grad)
     L = np.zeros(S.shape)
@@ -554,8 +576,8 @@ def weingarten_numpy(g, zum=1.0, yum=1.0, xum=1.0):
     eye[..., 0, 0] = 1
     eye[..., 1, 1] = 1
     eye[..., 2, 2] = 1
-    B = S+eye
-    A = H*np.linalg.inv(B)/L
+    B = S + eye
+    A = H * np.linalg.inv(B) / L
     return A
 
 

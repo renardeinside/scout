@@ -35,6 +35,7 @@ from scout.unet_keras import get_unet
 
 # Downsample Zarr
 
+
 def downsample(arr, factors):
     """
     Downsample image `arr` by factors in each dimension
@@ -61,6 +62,7 @@ def downsample(arr, factors):
 
 # Ventricle segmentation
 
+
 def load_model(path, device):
     model = UNet(1, 1)
     model.load_state_dict(torch.load(path))
@@ -79,7 +81,7 @@ def segment_ventricles(model, data, t, device):
         img = img.astype(np.float32)[np.newaxis, np.newaxis]
         img_tensor = torch.from_numpy(img).to(device)
         with warnings.catch_warnings():  # Suppress deprecated warning for Upsampling
-            warnings.simplefilter('ignore')
+            warnings.simplefilter("ignore")
             prob_tensor = model(img_tensor)
         prob = prob_tensor.detach().cpu().numpy()[0, 0]
         binary = (prob > t).astype(np.uint8)
@@ -93,7 +95,7 @@ def xy_padding(img, shape, cval=0):
     assert np.all(original_shape <= target_shape)
     padding = target_shape - original_shape
     pad_width = ((0, 0), (0, padding[1]), (0, padding[2]))  # No padding in z
-    padded = pad(img, pad_width, 'constant', constant_values=cval)
+    padded = pad(img, pad_width, "constant", constant_values=cval)
     return padded
 
 
@@ -114,7 +116,9 @@ def segment_ventricles_keras(model, data, t=0.5):
         prob = model.predict(img)
         binary = (prob > t).astype(np.uint8)
         output[i] = binary[..., 0]
-    return utils.extract_box(output, np.zeros(output.ndim, np.int), np.asarray(original_shape))
+    return utils.extract_box(
+        output, np.zeros(output.ndim, np.int), np.asarray(original_shape)
+    )
 
 
 # Calculate local densities and threshold
@@ -173,7 +177,7 @@ def downsample_main(args):
     else:
         nb_workers = args.n
 
-    verbose_print(args, f'Downsampling {args.input} with factors {args.factor}')
+    verbose_print(args, f"Downsampling {args.input} with factors {args.factor}")
 
     if args.tiff:
         os.makedirs(args.output, exist_ok=True)
@@ -197,34 +201,49 @@ def downsample_main(args):
         #     io.imsave(output, data, compress=3)
 
     else:
-        arr = io.open(args.input, mode='r')
+        arr = io.open(args.input, mode="r")
         if isinstance(args.factor, int):
             factors = tuple(args.factor for _ in range(arr.ndim))
         else:
             factors = tuple(args.factor)
         data = downsample(arr, factors)
-        verbose_print(args, f'Writing result to {args.output}')
+        verbose_print(args, f"Writing result to {args.output}")
         io.imsave(args.output, data, compress=3)
 
-    verbose_print(args, f'Downsampling done!')
+    verbose_print(args, f"Downsampling done!")
 
 
 def downsample_cli(subparsers):
-    downsample_parser = subparsers.add_parser('downsample', help="Downsample images",
-                                              description='Image downsampling tool for segmentation')
-    downsample_parser.add_argument('input', help="Path to input image to be downsampled")
-    downsample_parser.add_argument('output', help="Path to output downsampled TIFF image")
-    downsample_parser.add_argument('factor', help="Downsample factor", type=int, nargs='+')
-    downsample_parser.add_argument('-t', '--tiff', help="TIFF folder flag", action='store_true')
-    downsample_parser.add_argument('-n', help="Number of workers. Default, cpu_count", type=int, default=None)
-    downsample_parser.add_argument('-v', '--verbose', help="Verbose flag", action='store_true')
+    downsample_parser = subparsers.add_parser(
+        "downsample",
+        help="Downsample images",
+        description="Image downsampling tool for segmentation",
+    )
+    downsample_parser.add_argument(
+        "input", help="Path to input image to be downsampled"
+    )
+    downsample_parser.add_argument(
+        "output", help="Path to output downsampled TIFF image"
+    )
+    downsample_parser.add_argument(
+        "factor", help="Downsample factor", type=int, nargs="+"
+    )
+    downsample_parser.add_argument(
+        "-t", "--tiff", help="TIFF folder flag", action="store_true"
+    )
+    downsample_parser.add_argument(
+        "-n", help="Number of workers. Default, cpu_count", type=int, default=None
+    )
+    downsample_parser.add_argument(
+        "-v", "--verbose", help="Verbose flag", action="store_true"
+    )
 
 
 def stack_main(args):
-    verbose_print(args, f'Stacking images in {args.input}')
+    verbose_print(args, f"Stacking images in {args.input}")
 
     paths, filenames = utils.tifs_in_dir(args.input)
-    verbose_print(args, f'Found {len(paths)} images')
+    verbose_print(args, f"Found {len(paths)} images")
 
     img0 = io.imread(paths[0])
     shape2d, dtype = img0.shape, img0.dtype
@@ -234,42 +253,49 @@ def stack_main(args):
 
     io.imsave(args.output, img, compress=1)
 
-    verbose_print(args, f'Stacking done!')
+    verbose_print(args, f"Stacking done!")
 
 
 def stack_cli(subparsers):
-    stack_parser = subparsers.add_parser('stack', help="Stack images", description='Stacking tool for segmentation')
-    stack_parser.add_argument('input', help="Path to input images folder")
-    stack_parser.add_argument('output', help="Path to output TIFF image")
-    stack_parser.add_argument('-v', '--verbose', help="Verbose flag", action='store_true')
+    stack_parser = subparsers.add_parser(
+        "stack", help="Stack images", description="Stacking tool for segmentation"
+    )
+    stack_parser.add_argument("input", help="Path to input images folder")
+    stack_parser.add_argument("output", help="Path to output TIFF image")
+    stack_parser.add_argument(
+        "-v", "--verbose", help="Verbose flag", action="store_true"
+    )
 
 
 def ventricle_main(args):
-    verbose_print(args, f'Segmenting ventricles in {args.input}')
+    verbose_print(args, f"Segmenting ventricles in {args.input}")
 
     # Load the input image
     data = io.imread(args.input)
 
     # Load the model
-    if args.model.endswith('.pt'):
+    if args.model.endswith(".pt"):
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         # device = torch.device("cpu")
         model = load_model(args.model, device)
         model = model.eval()
-        verbose_print(args, f'Pytorch model successfully loaded from {args.model} to {device} device')
+        verbose_print(
+            args,
+            f"Pytorch model successfully loaded from {args.model} to {device} device",
+        )
         # Segment the input image
-        verbose_print(args, f'Segmentation progress:')
+        verbose_print(args, f"Segmentation progress:")
         output = segment_ventricles(model, data, args.t, device)
-    elif args.model.endswith('.h5'):
+    elif args.model.endswith(".h5"):
         model = load_keras_model(args.model)
-        verbose_print(args, f'Kerass model successfully loaded from {args.model}')
+        verbose_print(args, f"Kerass model successfully loaded from {args.model}")
         # Segment the input image
-        verbose_print(args, f'Segmentation progress:')
+        verbose_print(args, f"Segmentation progress:")
         output = segment_ventricles_keras(model, data, args.t)
 
     # Remove border regions
     if args.exclude_border:
-        verbose_print(args, f'Removing regions connected to image border')
+        verbose_print(args, f"Removing regions connected to image border")
         # This could also be done in 3D instead of slice-by-slice
         # I'm not sure if images will start in ventricle, so doing slice-by-slice to be safe
         img = np.zeros_like(output)
@@ -279,24 +305,38 @@ def ventricle_main(args):
 
     # Save the result to TIFF
     io.imsave(args.output, output, compress=3)
-    verbose_print(args, f'Segmentation written to {args.output}')
+    verbose_print(args, f"Segmentation written to {args.output}")
 
-    verbose_print(args, f'Ventricle segmentation done!')
+    verbose_print(args, f"Ventricle segmentation done!")
 
 
 def ventricle_cli(subparsers):
-    ventricle_parser = subparsers.add_parser('ventricle', help="Segment ventricles",
-                                             description='Ventricle segmentation tool using pretrained UNet')
-    ventricle_parser.add_argument('input', help="Path to input (downsampled) image")
-    ventricle_parser.add_argument('model', help="Path to pretrained Pytorch model")
-    ventricle_parser.add_argument('output', help="Path to output ventricle segmentation TIFF")
-    ventricle_parser.add_argument('-t', help="Probability threshold for binarization", type=float, default=0.5)
-    ventricle_parser.add_argument('-e', '--exclude-border', help="Flag to exclude border regions", action='store_true')
-    ventricle_parser.add_argument('-v', '--verbose', help="Verbose flag", action='store_true')
+    ventricle_parser = subparsers.add_parser(
+        "ventricle",
+        help="Segment ventricles",
+        description="Ventricle segmentation tool using pretrained UNet",
+    )
+    ventricle_parser.add_argument("input", help="Path to input (downsampled) image")
+    ventricle_parser.add_argument("model", help="Path to pretrained Pytorch model")
+    ventricle_parser.add_argument(
+        "output", help="Path to output ventricle segmentation TIFF"
+    )
+    ventricle_parser.add_argument(
+        "-t", help="Probability threshold for binarization", type=float, default=0.5
+    )
+    ventricle_parser.add_argument(
+        "-e",
+        "--exclude-border",
+        help="Flag to exclude border regions",
+        action="store_true",
+    )
+    ventricle_parser.add_argument(
+        "-v", "--verbose", help="Verbose flag", action="store_true"
+    )
 
 
 def foreground_main(args):
-    verbose_print(args, f'Segmenting foreground from {args.input}')
+    verbose_print(args, f"Segmenting foreground from {args.input}")
 
     # Load the input image
     data = io.imread(args.input)
@@ -306,7 +346,7 @@ def foreground_main(args):
         data = gaussian_blur(data, args.g).astype(data.dtype)
 
     # Threshold image
-    foreground = (data > args.t)  # .astype(np.uint8)
+    foreground = data > args.t  # .astype(np.uint8)
 
     # Fill holes
     # This is done slice-by-slice for now since there could be imaging problems where
@@ -318,40 +358,56 @@ def foreground_main(args):
 
     # Save the result to TIFF
     io.imsave(args.output, output, compress=3)
-    verbose_print(args, f'Segmentation written to {args.output}')
+    verbose_print(args, f"Segmentation written to {args.output}")
 
-    verbose_print(args, f'Foreground segmentation done!')
+    verbose_print(args, f"Foreground segmentation done!")
 
 
 def foreground_cli(subparsers):
-    foreground_parser = subparsers.add_parser('foreground', help="Segment foreground",
-                                              description='Foreground segmentation tool')
-    foreground_parser.add_argument('input', help="Path to input (downsampled) image")
-    foreground_parser.add_argument('output', help="Path to output foreground segmentation TIFF")
-    foreground_parser.add_argument('-g', help="Amount of gaussian smoothing", type=float, nargs='+', default=None)
-    foreground_parser.add_argument('-t', help="Intensity threshold", type=float, default=0.1)
-    foreground_parser.add_argument('-v', '--verbose', help="Verbose flag", action='store_true')
+    foreground_parser = subparsers.add_parser(
+        "foreground",
+        help="Segment foreground",
+        description="Foreground segmentation tool",
+    )
+    foreground_parser.add_argument("input", help="Path to input (downsampled) image")
+    foreground_parser.add_argument(
+        "output", help="Path to output foreground segmentation TIFF"
+    )
+    foreground_parser.add_argument(
+        "-g", help="Amount of gaussian smoothing", type=float, nargs="+", default=None
+    )
+    foreground_parser.add_argument(
+        "-t", help="Intensity threshold", type=float, default=0.1
+    )
+    foreground_parser.add_argument(
+        "-v", "--verbose", help="Verbose flag", action="store_true"
+    )
 
 
 def segment_main(args):
     commands_dict = {
-        'downsample': downsample_main,
-        'stack': stack_main,
-        'ventricle': ventricle_main,
-        'foreground': foreground_main,
+        "downsample": downsample_main,
+        "stack": stack_main,
+        "ventricle": ventricle_main,
+        "foreground": foreground_main,
     }
     func = commands_dict.get(args.segment_command, None)
     if func is None:
         print("Pickle Rick uses segment subcommands... be like Pickle Rick\n")
-        subprocess.call(['scout', 'segment', '-h'])
+        subprocess.call(["scout", "segment", "-h"])
     else:
         func(args)
 
 
 def segment_cli(subparsers):
-    segment_parser = subparsers.add_parser('segment', help="Segment organoid regions",
-                                           description='Organoid region segmentation tool')
-    segment_subparsers = segment_parser.add_subparsers(dest='segment_command', title='segment subcommands')
+    segment_parser = subparsers.add_parser(
+        "segment",
+        help="Segment organoid regions",
+        description="Organoid region segmentation tool",
+    )
+    segment_subparsers = segment_parser.add_subparsers(
+        dest="segment_command", title="segment subcommands"
+    )
     downsample_cli(segment_subparsers)
     stack_cli(segment_subparsers)
     ventricle_cli(segment_subparsers)
